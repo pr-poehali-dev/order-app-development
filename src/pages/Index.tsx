@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Icon from "@/components/ui/icon";
 
+const ORDERS_URL = "https://functions.poehali.dev/75ab582c-1b5f-4bde-9fcb-e647fcad47ee";
+
 const NAV_ITEMS = [
   { id: "home", label: "Главная" },
   { id: "services", label: "Услуги" },
@@ -108,6 +110,110 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle?: string })
       <h2 className="font-oswald text-4xl font-semibold text-foreground uppercase tracking-wide mb-3">{title}</h2>
       {subtitle && <p className="text-muted-foreground text-lg max-w-2xl">{subtitle}</p>}
     </div>
+  );
+}
+
+function OrderForm() {
+  const [form, setForm] = useState({ name: "", phone: "", service: "", address: "", comment: "" });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    try {
+      const res = await fetch(ORDERS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        setStatus("success");
+        setForm({ name: "", phone: "", service: "", address: "", comment: "" });
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  const field = (key: keyof typeof form, placeholder: string, type = "text") => (
+    <input
+      type={type}
+      placeholder={placeholder}
+      value={form[key]}
+      onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+      className="w-full bg-background border border-border px-4 py-3 text-sm font-golos text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+    />
+  );
+
+  if (status === "success") {
+    return (
+      <div className="border border-primary/30 bg-primary/5 p-8 flex flex-col items-center text-center gap-4">
+        <div className="w-14 h-14 bg-primary/10 flex items-center justify-center">
+          <Icon name="CheckCircle" size={28} className="text-primary" />
+        </div>
+        <h3 className="font-oswald text-2xl font-semibold uppercase text-foreground">Заявка отправлена!</h3>
+        <p className="font-golos text-muted-foreground">Дмитрий свяжется с вами в ближайшее время для согласования осмотра.</p>
+        <button
+          onClick={() => setStatus("idle")}
+          className="mt-2 border border-primary/40 text-primary font-oswald text-xs uppercase tracking-widest px-5 py-2 hover:bg-primary/10 transition-colors"
+        >
+          Отправить ещё
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="border border-border bg-card p-8 space-y-4">
+      <h3 className="font-oswald text-2xl font-semibold uppercase text-foreground mb-2">Оставить заявку</h3>
+      <p className="font-golos text-sm text-muted-foreground mb-6">Заполните форму — Дмитрий свяжется и согласует бесплатный осмотр.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {field("name", "Ваше имя *")}
+        {field("phone", "Телефон *", "tel")}
+      </div>
+      <select
+        value={form.service}
+        onChange={(e) => setForm((f) => ({ ...f, service: e.target.value }))}
+        className="w-full bg-background border border-border px-4 py-3 text-sm font-golos text-foreground focus:outline-none focus:border-primary transition-colors"
+      >
+        <option value="">Услуга (необязательно)</option>
+        <option>Покраска краскопультом</option>
+        <option>Покос и уборка участка</option>
+        <option>Демонтаж и расчистка</option>
+        <option>Не знаю, нужна консультация</option>
+      </select>
+      {field("address", "Адрес объекта (необязательно)")}
+      <textarea
+        placeholder="Комментарий (необязательно)"
+        value={form.comment}
+        onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))}
+        rows={3}
+        className="w-full bg-background border border-border px-4 py-3 text-sm font-golos text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors resize-none"
+      />
+      {status === "error" && (
+        <p className="text-destructive font-golos text-sm">Ошибка отправки. Позвоните нам напрямую: 8 (993) 503-98-59</p>
+      )}
+      <button
+        type="submit"
+        disabled={status === "loading"}
+        className="w-full bg-primary text-primary-foreground font-oswald font-medium uppercase tracking-widest text-sm px-8 py-4 hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+      >
+        {status === "loading" ? (
+          <>
+            <Icon name="Loader2" size={16} className="animate-spin" />
+            Отправляем...
+          </>
+        ) : (
+          <>
+            <Icon name="Send" size={16} />
+            Отправить заявку
+          </>
+        )}
+      </button>
+      <p className="font-golos text-xs text-muted-foreground text-center">Нажимая кнопку, вы соглашаетесь на обработку персональных данных</p>
+    </form>
   );
 }
 
@@ -475,8 +581,11 @@ export default function Index() {
       {/* CONTACTS */}
       <section id="contacts" className="py-24 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <SectionTitle title="Контакты" subtitle="Звоните или пишите — отвечу быстро" />
+          <SectionTitle title="Контакты" subtitle="Оставьте заявку или свяжитесь напрямую — отвечу быстро" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="section-reveal">
+              <OrderForm />
+            </div>
             <div className="section-reveal space-y-4">
               <a
                 href="tel:+79935039859"
@@ -518,25 +627,24 @@ export default function Index() {
                   <div className="font-oswald text-xl font-semibold text-foreground group-hover:text-primary transition-colors">max.ru/join/dfe20</div>
                 </div>
               </a>
-            </div>
-            <div className="section-reveal border border-border bg-card p-8">
-              <h3 className="font-oswald text-2xl font-semibold uppercase text-foreground mb-6">Как работаем</h3>
-              <div className="space-y-6">
-                {[
-                  { num: "01", title: "Звонок", desc: "Звоните или пишите в удобный мессенджер" },
-                  { num: "02", title: "Осмотр", desc: "Приезжаю, осматриваю объект — бесплатно" },
-                  { num: "03", title: "Договор", desc: "Называю цену, заключаем договор" },
-                  { num: "04", title: "Работа", desc: "Выполняю в срок, убираю за собой" },
-                  { num: "05", title: "Документы", desc: "Выдаю чек, акт, документы для юрлиц" },
-                ].map((step, i) => (
-                  <div key={i} className="flex gap-5 items-start">
-                    <span className="font-oswald text-2xl font-bold text-primary/30 shrink-0 w-8">{step.num}</span>
-                    <div>
-                      <div className="font-oswald text-base font-semibold uppercase text-foreground mb-1">{step.title}</div>
-                      <div className="font-golos text-sm text-muted-foreground">{step.desc}</div>
+              <div className="border border-border bg-card p-6">
+                <div className="font-oswald text-sm uppercase tracking-wider text-muted-foreground mb-4">Как работаем</div>
+                <div className="space-y-4">
+                  {[
+                    { num: "01", title: "Заявка", desc: "Оставьте заявку или позвоните" },
+                    { num: "02", title: "Осмотр", desc: "Приезжаю, осматриваю объект — бесплатно" },
+                    { num: "03", title: "Договор", desc: "Называю цену, заключаем договор" },
+                    { num: "04", title: "Работа + документы", desc: "Выполняю, убираю, выдаю чек и акт" },
+                  ].map((step, i) => (
+                    <div key={i} className="flex gap-4 items-start">
+                      <span className="font-oswald text-xl font-bold text-primary/30 shrink-0 w-7">{step.num}</span>
+                      <div>
+                        <div className="font-oswald text-sm font-semibold uppercase text-foreground">{step.title}</div>
+                        <div className="font-golos text-xs text-muted-foreground">{step.desc}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           </div>
